@@ -6,7 +6,7 @@
 (function (global) {
   "use strict";
 
-  const MODEL_URL = "/model/rank_model.json"; // works when index.html is at repo root
+  const MODEL_URL = "./model/rank_model.json"; // works when index.html is at repo root
 
   function dot(w, x) {
     let s = 0;
