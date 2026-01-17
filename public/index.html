@@ -126,7 +126,6 @@
     }
     .btn-ghost:hover{ opacity:.95; transform: translateY(-1px); }
     .status{
-
       font-size: 13px;
       color: rgba(16,24,40,.82);
       margin-left: 4px;
@@ -286,13 +285,33 @@
     el("btnReset").disabled = disabled;
   }
 
-  // PDF.js extraction
+  // Robust access to PDF.js global + worker setup (fixes "pdfjsLib is not defined")
+  function getPdfjs(){
+    if (window.pdfjsLib) return window.pdfjsLib;
+    if (window["pdfjs-dist/build/pdf"]) return window["pdfjs-dist/build/pdf"];
+    throw new Error("PDF.js failed to load (pdfjsLib not found).");
+  }
+
+  function ensurePdfWorker(pdfjs){
+    // Some builds require workerSrc to be set explicitly
+    if (!pdfjs.GlobalWorkerOptions.workerSrc){
+      pdfjs.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js";
+    }
+  }
+
+  // PDF extraction
   async function extractPdfText(file){
     if (!file) return "";
     const buf = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+
+    const pdfjs = getPdfjs();
+    ensurePdfWorker(pdfjs);
+
+    const pdf = await pdfjs.getDocument({ data: buf }).promise;
     const maxPages = pdf.numPages;
     let text = "";
+
     for (let p = 1; p <= maxPages; p++){
       setStatus(`Extracting resume text… page ${p}/${maxPages}`, true);
       const page = await pdf.getPage(p);
@@ -370,7 +389,7 @@
     }
 
     try{
-      const model = await PMERanker.loadModel(); // loads ./public/model/rank_model.json
+      const model = await PMERanker.loadModel();
       setStatus("Extracting resume…", true);
       const resumeText = await extractPdfText(resumeFile);
 
