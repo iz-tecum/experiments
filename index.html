@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PME Eligibility & Interest Score (Prototype)</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: Montserrat, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:#ffffff;
+      color:#0b1220;
+    }
+    :root{
+      --container: 980px;
+      --padX: 22px;
+      --muted: rgba(16,24,40,.72);
+      --border: rgba(16,24,40,.14);
+      --card: rgba(16,24,40,.04);
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .wrap{ max-width: var(--container); margin: 0 auto; padding: 28px var(--padX) 64px; }
+    h1{ margin: 0 0 10px; font-size: 36px; letter-spacing:-0.02em; font-weight: 600; }
+    .sub{ margin:0 0 26px; color: var(--muted); line-height:1.7; max-width: 900px; }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    .card{
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 10px 30px rgba(16,24,40,.06);
+    }
+
+    .card h2{
+      margin: 0 0 10px;
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: .02em;
+    }
+
+    label{
+      display:block;
+      font-size: 12px;
+      letter-spacing:.06em;
+      text-transform: uppercase;
+      color: rgba(16,24,40,.78);
+      margin: 14px 0 8px;
+      font-weight: 600;
+    }
+
+    input[type="number"], input[type="file"], select, textarea{
+      width:100%;
+      padding: 12px 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 200ms var(--ease), box-shadow 200ms var(--ease);
+      background: #fff;
+    }
+    textarea{ min-height: 120px; resize: vertical; line-height:1.6; }
+    input:focus, select:focus, textarea:focus{
+      border-color: rgba(16,24,40,.28);
+      box-shadow: 0 0 0 4px rgba(16,24,40,.08);
+    }
+
+    .row{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 820px){
+      .row{ grid-template-columns: 1fr; }
+      h1{ font-size: 30px; }
+    }
+
+    .note{
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height:1.65;
+    }
+
+    .actions{
+      display:flex;
+      gap: 10px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+      align-items:center;
+    }
+    button{
+      appearance:none;
+      border: 0;
+      cursor:pointer;
+      font-family: inherit;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-weight: 700;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      font-size: 12px;
+      transition: transform 160ms var(--ease), opacity 160ms var(--ease), background-color 160ms var(--ease);
+    }
+    button:disabled{
+      opacity: .55;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+    .btn-primary{
+      background: rgba(16,24,40,.92);
+      color: #fff;
+    }
+    .btn-primary:hover{ opacity:.95; transform: translateY(-1px); }
+    .btn-ghost{
+      background: rgba(16,24,40,.06);
+      color: rgba(16,24,40,.92);
+    }
+    .btn-ghost:hover{ opacity:.95; transform: translateY(-1px); }
+
+    .status{
+      font-size: 13px;
+      color: rgba(16,24,40,.82);
+      margin-left: 4px;
+    }
+    .status.muted{ color: var(--muted); }
+
+    .results{
+      margin-top: 14px;
+      padding: 16px;
+      border-radius: 14px;
+      background: var(--card);
+      border: 1px solid rgba(16,24,40,.10);
+    }
+    .big{
+      font-size: 42px;
+      font-weight: 700;
+      letter-spacing:-0.02em;
+      margin: 0;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      letter-spacing:.10em;
+      text-transform: uppercase;
+      font-weight: 700;
+      border: 1px solid rgba(16,24,40,.12);
+      background:#fff;
+      margin-top: 10px;
+    }
+
+    .breakdown{
+      margin-top: 12px;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .bd{
+      background:#fff;
+      border: 1px solid rgba(16,24,40,.10);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 13px;
+      color: rgba(16,24,40,.86);
+    }
+    .bd strong{ font-weight: 700; }
+
+    .tiny{ font-size: 12px; color: var(--muted); line-height:1.6; margin-top: 10px; }
+    .tiny strong{ color: rgba(16,24,40,.86); }
+
+    .err{
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(220,38,38,.06);
+      border: 1px solid rgba(220,38,38,.18);
+      color: rgba(127,29,29,.92);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>PME Eligibility &amp; Interest Score</h1>
+    <p class="sub">
+      Prototype scoring tool. Final membership is determined by chapter nomination and election.
+      This page computes a holistic score (1.0–10.0) using your weights, including a true binary for Calc I/II.
+      Resume and short answers are scored by OpenAI through a serverless endpoint at <code>/api/score</code>.
+    </p>
+
+    <div class="grid">
+
+      <div class="card">
+        <h2>Academic Signals</h2>
+
+        <div class="row">
+          <div>
+            <label for="gpa">Overall GPA (0.0–4.0)</label>
+            <input id="gpa" type="number" min="0" max="4" step="0.01" placeholder="3.78" />
+            <p class="note">Minimum target is 3.40. Below 3.40 scores lower, but still contributes holistically.</p>
+          </div>
+
+          <div>
+            <label for="calc">Completed Calculus I &amp; II (or equivalent)</label>
+            <select id="calc">
+              <option value="">Select</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+            <p class="note">This is intentionally binary. Yes scores 10. No scores 0.</p>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="upperCount">Number of math courses at or above calculus (excluding Calc I and II)</label>
+            <input id="upperCount" type="number" min="0" max="20" step="1" placeholder="2" />
+          </div>
+          <div>
+            <label for="upperRigor">Highest level among those courses</label>
+            <select id="upperRigor">
+              <option value="">Select</option>
+              <option value="standard">Standard (multivariable, linear algebra, ODE, etc.)</option>
+              <option value="proof">Proof-based (intro proofs, discrete, proof LA)</option>
+              <option value="upper">Upper-level (analysis, algebra, topology, complex, etc.)</option>
+              <option value="grad">Graduate-level or research seminar</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Materials</h2>
+
+        <label for="resume">Resume (PDF)</label>
+        <input id="resume" type="file" accept="application/pdf" />
+        <p class="note">Resume and short answers are sent to <code>/api/score</code> and scored using a fixed rubric.</p>
+
+        <label for="essayMath">Short Answer 1 (Math maturity)</label>
+        <textarea id="essayMath" placeholder="Describe a theorem/proof/problem you found beautiful. What was the key idea?"></textarea>
+
+        <label for="essayCommunity">Short Answer 2 (Community contribution)</label>
+        <textarea id="essayCommunity" placeholder="How would you contribute to the chapter this term?"></textarea>
+
+        <div class="actions">
+          <button class="btn-primary" id="btnScore" type="button">Calculate Score</button>
+          <button class="btn-ghost" id="btnReset" type="button">Reset</button>
+          <span id="status" class="status muted"></span>
+        </div>
+
+        <div id="out" class="results" style="display:none;"></div>
+      </div>
+
+    </div>
+  </div>
+
+<script>
+  // ---------- Local scoring helpers (0–10) ----------
+  function clamp10(x){
+    const v = Number(x);
+    if (Number.isNaN(v)) return 0;
+    return Math.max(0, Math.min(10, v));
+  }
+
+  // GPA scoring with a steep drop below 3.4 but still holistic
+  function scoreGpa(gpa){
+    if (Number.isNaN(gpa)) return 0;
+    const x = Math.max(0, Math.min(4, gpa));
+
+    if (x >= 3.90) return 10;
+
+    if (x >= 3.70){
+      return 9 + (x - 3.70) * (0.9 / 0.19);
+    }
+
+    if (x >= 3.40){
+      return 6 + (x - 3.40) * (2.9 / 0.29);
+    }
+
+    if (x >= 3.20){
+      return 3 + (x - 3.20) * (2.9 / 0.19);
+    }
+
+    return (x / 3.19) * 2.9;
+  }
+
+  function scoreCalc(calcVal){
+    if (calcVal === "yes") return 10;
+    if (calcVal === "no") return 0;
+    return 0;
+  }
+
+  function scoreUpperCourses(count, rigor){
+    const n = Math.max(0, Math.min(20, count || 0));
+
+    let base = 0;
+    if (n === 0) base = 0;
+    else if (n === 1) base = 3.5;
+    else if (n === 2) base = 6.0;
+    else if (n === 3) base = 7.2;
+    else if (n === 4) base = 8.2;
+    else if (n === 5) base = 9.0;
+    else base = 9.4;
+
+    let bonus = 0;
+    if (rigor === "proof") bonus = 0.3;
+    if (rigor === "upper") bonus = 0.6;
+    if (rigor === "grad") bonus = 0.9;
+
+    return Math.min(10, base + bonus);
+  }
+
+  // Trajectory bonus (up to +0.7)
+  function trajectoryBonus(sUpper, sMaturity, sResume, sCommunity){
+    let b = 0;
+    if (sUpper >= 8 && (sMaturity >= 8 || sResume >= 8)) b = Math.max(b, 0.3);
+    if (sUpper >= 9 && sMaturity >= 9) b = Math.max(b, 0.5);
+    if (sUpper >= 9 && sMaturity >= 9 && sCommunity >= 8) b = Math.max(b, 0.7);
+    return b;
+  }
+
+  function readinessLabel(calcScore, upperCount){
+    if (calcScore === 10 && upperCount >= 2) return "Likely eligible";
+    if (calcScore === 10) return "Possibly eligible";
+    return "Not eligible (yet)";
+  }
+
+  // ---------- OpenAI scoring via serverless endpoint ----------
+  async function scoreWithOpenAI({ resumeFile, essayMath, essayCommunity, gpa, calcVal, upperCount, upperRigor }) {
+    const fd = new FormData();
+
+    // Resume is optional, but your /api/score may require it.
+    if (resumeFile) fd.append("resume", resumeFile);
+
+    fd.append("essay_math", essayMath || "");
+    fd.append("essay_community", essayCommunity || "");
+    fd.append("gpa", String(gpa || ""));
+    fd.append("calc_completed", String(calcVal || ""));
+    fd.append("upper_count", String(upperCount || ""));
+    fd.append("upper_rigor", String(upperRigor || ""));
+
+    const r = await fetch("/api/score", { method: "POST", body: fd });
+    const raw = await r.text();
+
+    if (!r.ok) {
+      const msg = raw && raw.length < 1200 ? raw : "Scoring request failed.";
+      throw new Error(msg);
+    }
+
+    let json;
+    try {
+      json = JSON.parse(raw);
+    } catch {
+      throw new Error("Server did not return valid JSON.");
+    }
+
+    // Expected (ideal):
+    // resume_score, essay_maturity, essay_community, confidence, strengths, risks_or_gaps
+    // If you only implemented resume scoring server-side for now, this still works:
+    // resume_score will populate and essays will show as missing with flags.
+    return json;
+  }
+
+  // ---------- Main ----------
+  const el = (id) => document.getElementById(id);
+
+  function setStatus(msg, muted = true){
+    const s = el("status");
+    s.textContent = msg || "";
+    s.classList.toggle("muted", !!muted);
+  }
+
+  function disableUI(disabled){
+    el("btnScore").disabled = disabled;
+    el("btnReset").disabled = disabled;
+  }
+
+  el("btnScore").addEventListener("click", async () => {
+    disableUI(true);
+    setStatus("Scoring…", true);
+
+    const gpa = parseFloat(el("gpa").value);
+    const calcVal = el("calc").value;
+
+    const upperCount = parseInt(el("upperCount").value || "0", 10);
+    const upperRigor = el("upperRigor").value;
+
+    const resumeFile = el("resume").files && el("resume").files[0] ? el("resume").files[0] : null;
+    const essayMath = el("essayMath").value || "";
+    const essayCommunity = el("essayCommunity").value || "";
+
+    // Local components
+    const s1 = scoreGpa(gpa);
+    const s2 = scoreCalc(calcVal);
+    const s3 = scoreUpperCourses(upperCount, upperRigor);
+
+    // AI components (default to 0 until filled)
+    let s4 = 0; // resume
+    let s5 = 0; // maturity
+    let s6 = 0; // community
+    let aiMeta = null;
+    let aiError = null;
+
+    const flags = [];
+    if (!calcVal) flags.push("Calc I/II selection missing");
+    if (!upperRigor) flags.push("Upper-level rigor selection missing");
+    if (s2 === 0) flags.push("Calc I/II not completed");
+    if (upperCount < 2 && s2 === 10) flags.push("Needs verification of 2+ additional at/above-calculus math courses");
+
+    try {
+      // Call /api/score to score resume + essays
+      const scored = await scoreWithOpenAI({
+        resumeFile,
+        essayMath,
+        essayCommunity,
+        gpa,
+        calcVal,
+        upperCount,
+        upperRigor
+      });
+
+      aiMeta = scored;
+
+      if (typeof scored.resume_score === "number") s4 = clamp10(scored.resume_score);
+      else flags.push("Resume score missing (check /api/score implementation)");
+
+      if (typeof scored.essay_maturity === "number") s5 = clamp10(scored.essay_maturity);
+      if (typeof scored.essay_community === "number") s6 = clamp10(scored.essay_community);
+
+      // If backend returns only a combined essays_score, use it for both
+      if ((s5 === 0 && s6 === 0) && typeof scored.essays_score === "number") {
+        s5 = clamp10(scored.essays_score);
+        s6 = clamp10(scored.essays_score);
+      }
+
+      if (s5 === 0) flags.push("Essay maturity score missing (add essay scoring to /api/score)");
+      if (s6 === 0) flags.push("Essay community score missing (add essay scoring to /api/score)");
+
+      setStatus("Scored with OpenAI.", true);
+    } catch (err) {
+      aiError = err && err.message ? err.message : "OpenAI scoring failed.";
+      flags.push("OpenAI scoring failed (check /api/score and OPENAI_API_KEY).");
+      setStatus("Scoring failed.", false);
+    }
+
+    // Weighted total
+    const Sraw =
+      0.18 * s1 +
+      0.16 * s2 +
+      0.16 * s3 +
+      0.18 * s4 +
+      0.16 * s5 +
+      0.16 * s6;
+
+    const bonus = trajectoryBonus(s3, s5, s4, s6);
+    const S = Math.min(10, Sraw + bonus);
+    const finalScore = Math.round(S * 10) / 10;
+
+    const readiness = readinessLabel(s2, upperCount);
+
+    const out = el("out");
+    out.style.display = "block";
+
+    const strengths = Array.isArray(aiMeta && aiMeta.strengths) ? aiMeta.strengths : [];
+    const risks = Array.isArray(aiMeta && aiMeta.risks_or_gaps) ? aiMeta.risks_or_gaps : [];
+    const conf = (aiMeta && typeof aiMeta.confidence === "string") ? aiMeta.confidence : null;
+
+    out.innerHTML = `
+      <p class="big">${finalScore.toFixed(1)}</p>
+      <div class="pill">${readiness}</div>
+      <p class="note" style="margin-top:10px;">
+        This is a prototype estimate. Final membership is determined by chapter nomination and election.
+      </p>
+
+      <div class="breakdown">
+        <div class="bd"><strong>GPA</strong> ${s1.toFixed(1)} / 10</div>
+        <div class="bd"><strong>Calc I/II</strong> ${s2.toFixed(1)} / 10</div>
+        <div class="bd"><strong>Upper-level courses</strong> ${s3.toFixed(1)} / 10</div>
+        <div class="bd"><strong>Resume</strong> ${s4.toFixed(1)} / 10</div>
+        <div class="bd"><strong>Essay maturity</strong> ${s5.toFixed(1)} / 10</div>
+        <div class="bd"><strong>Essay community</strong> ${s6.toFixed(1)} / 10</div>
+        <div class="bd"><strong>Trajectory bonus</strong> +${bonus.toFixed(1)}</div>
+        <div class="bd"><strong>AI confidence</strong> ${conf ? conf : "n/a"}</div>
+      </div>
+
+      ${
+        strengths.length
+          ? `<p class="tiny"><strong>AI strengths</strong><br>${strengths.map(s => `• ${escapeHtml(s)}`).join("<br>")}</p>`
+          : ``
+      }
+
+      ${
+        risks.length
+          ? `<p class="tiny"><strong>AI risks or gaps</strong><br>${risks.map(s => `• ${escapeHtml(s)}`).join("<br>")}</p>`
+          : ``
+      }
+
+      ${flags.length ? `<p class="tiny"><strong>Flags</strong><br>${flags.map(f => `• ${escapeHtml(f)}`).join("<br>")}</p>` : ``}
+
+      ${aiError ? `<div class="err"><strong>OpenAI scoring error</strong><br>${escapeHtml(aiError)}</div>` : ``}
+    `;
+
+    disableUI(false);
+  });
+
+  el("btnReset").addEventListener("click", () => {
+    ["gpa","calc","upperCount","upperRigor","resume","essayMath","essayCommunity"].forEach(id => {
+      const node = el(id);
+      if (!node) return;
+      if (node.type === "file") node.value = "";
+      else node.value = "";
+    });
+    setStatus("", true);
+    el("out").style.display = "none";
+    el("out").innerHTML = "";
+  });
+
+  function escapeHtml(s = "") {
+    return String(s)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+</script>
+</body>
+</html>

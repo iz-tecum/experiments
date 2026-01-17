@@ -1,0 +1,11 @@
+{
+  "name": "experiments",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Prototype pages + Vercel serverless scoring for Pi Mu Epsilon eligibility form",
+  "dependencies": {
+    "busboy": "^1.6.0",
+    "openai": "^4.0.0",
+    "pdf-parse": "^1.1.1"
+  }
+}
