@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Pairwise Labeler (PME Ranker)</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    body{ margin:0; font-family:Montserrat,system-ui,-apple-system,Segoe UI,sans-serif; color:#0b1220; background:#fff; }
+    .wrap{ max-width: 1080px; margin:0 auto; padding: 22px; }
+    h1{ margin: 0 0 10px; font-size: 28px; letter-spacing:-0.02em; }
+    .muted{ color: rgba(16,24,40,.72); line-height:1.6; }
+    .card{ border: 1px solid rgba(16,24,40,.14); border-radius: 14px; padding: 16px; margin-top: 14px; }
+    label{ display:block; margin: 12px 0 6px; font-size: 12px; letter-spacing:.08em; text-transform: uppercase; font-weight: 700; color: rgba(16,24,40,.78); }
+    input[type="file"], input[type="text"]{
+      width:100%; padding: 12px; border:1px solid rgba(16,24,40,.14); border-radius: 12px; font-family:inherit;
+    }
+    button{ border:0; border-radius: 12px; padding: 12px 14px; font-weight: 800; letter-spacing:.10em; text-transform: uppercase; cursor:pointer; }
+    button:disabled{ opacity:.55; cursor:not-allowed; }
+    .primary{ background: rgba(16,24,40,.92); color:#fff; }
+    .ghost{ background: rgba(16,24,40,.06); color: rgba(16,24,40,.92); }
+    .danger{ background: rgba(220,38,38,.10); color: rgba(127,29,29,.92); }
+    .row{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media(max-width:920px){ .row{ grid-template-columns:1fr; } }
+
+    .arena{
+      margin-top: 14px;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      align-items: stretch;
+    }
+    @media(max-width:920px){ .arena{ grid-template-columns:1fr; } }
+
+    .panel{
+      border: 1px solid rgba(16,24,40,.14);
+      border-radius: 14px;
+      padding: 14px;
+      background: rgba(16,24,40,.02);
+      min-height: 210px;
+      display:flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .pid{
+      font-weight: 800;
+      letter-spacing:.08em;
+      text-transform: uppercase;
+      font-size: 12px;
+      color: rgba(16,24,40,.70);
+    }
+    .pname{
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing:-0.01em;
+      margin: 2px 0 0;
+    }
+    .meta{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .chip{
+      background: #fff;
+      border: 1px solid rgba(16,24,40,.10);
+      border-radius: 12px;
+      padding: 10px 10px;
+      font-size: 13px;
+      color: rgba(16,24,40,.86);
+    }
+    .chip strong{ font-weight: 800; }
+
+    .controls{
+      margin-top: 12px;
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items:center;
+    }
+
+    pre{
+      white-space: pre-wrap;
+      background: rgba(16,24,40,.04);
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(16,24,40,.10);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .statline{
+      margin-top: 10px;
+      font-size: 13px;
+      color: rgba(16,24,40,.78);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <h1>Pairwise Labeler</h1>
+    <p class="muted">
+      Admin tool. Load <code>applicants.jsonl</code>, then label pairs: who should rank higher for PME membership.
+      Export <code>pairs.csv</code> and train the ranker locally. Keep this page private.
+    </p>
+
+    <div class="card">
+      <div class="row">
+        <div>
+          <label>Load applicants.jsonl</label>
+          <input id="jsonlFile" type="file" accept=".jsonl,text/plain"/>
+          <p class="muted" style="margin:10px 0 0;">
+            Tip: your file can contain many lines. Each line should be one JSON object with <code>{id, features, meta}</code>.
+          </p>
+        </div>
+        <div>
+          <label>Optional: session tag (for your notes)</label>
+          <input id="sessionTag" type="text" placeholder="spring-2026-round1"/>
+          <p class="muted" style="margin:10px 0 0;">
+            Doesn’t affect training. Just helps you keep exports organized.
+          </p>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="primary" id="btnStart" type="button" disabled>Start Labeling</button>
+        <button class="ghost" id="btnNext" type="button" disabled>Skip Pair</button>
+        <button class="ghost" id="btnDownload" type="button" disabled>Download pairs.csv</button>
+        <button class="danger" id="btnReset" type="button">Reset Session</button>
+        <span id="status" class="statline"></span>
+      </div>
+
+      <div class="arena" id="arena" style="display:none;">
+        <div class="panel" id="panelA">
+          <div>
+            <div class="pid" id="aid"></div>
+            <div class="pname" id="aname"></div>
+            <div class="meta" id="ameta"></div>
+          </div>
+          <button class="primary" id="btnA" type="button">A is stronger</button>
+        </div>
+
+        <div class="panel" id="panelB">
+          <div>
+            <div class="pid" id="bid"></div>
+            <div class="pname" id="bname"></div>
+            <div class="meta" id="bmeta"></div>
+          </div>
+          <button class="primary" id="btnB" type="button">B is stronger</button>
+        </div>
+      </div>
+
+      <div id="debugWrap" style="display:none; margin-top:12px;">
+        <details>
+          <summary style="cursor:pointer; font-weight:800; letter-spacing:.10em; text-transform:uppercase; font-size:12px;">
+            Debug details
+          </summary>
+          <pre id="debug"></pre>
+        </details>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ==========================
+  // Expected feature indices from your feature_extractor.html
+  // Keep consistent with FEATURE_NAMES there.
+  // 0 gpa_score_0_10
+  // 1 calc12_binary_0_or_10
+  // 2 upper_math_score_0_10
+  // 3 resume_len_log
+  // 8 kw_math_engagement
+  // 9 kw_research_exposition
+  // 10 kw_teaching_mentoring
+  // 11 kw_leadership_service
+  // 12 kw_awards_honors
+  // 13 kw_competitions
+  // 14 essay_math_len_log
+  // 15 essay_comm_len_log
+  // 16 essay_math_reasoning_markers
+  // 17 essay_comm_specificity_markers
+  // 20 keyword_density_penalty
+  const IDX = {
+    gpa: 0,
+    calc: 1,
+    upper: 2,
+    rlen: 3,
+    mathEng: 8,
+    research: 9,
+    teach: 10,
+    leader: 11,
+    awards: 12,
+    comp: 13,
+    emLen: 14,
+    ecLen: 15,
+    emReason: 16,
+    ecSpec: 17,
+    pen: 20
+  };
+
+  const el = (id) => document.getElementById(id);
+
+  let applicants = [];
+  let pairs = []; // {i, j, y} where y=1 => i beats j, y=0 => j beats i
+  let seen = new Set(); // "i|j" sorted
+  let curA = null;
+  let curB = null;
+
+  function setStatus(msg){
+    el("status").textContent = msg || "";
+  }
+
+  function safeName(a){
+    const n = a && a.meta && a.meta.name ? String(a.meta.name).trim() : "";
+    return n || "(no name)";
+  }
+
+  function pairKey(id1, id2){
+    return (id1 < id2) ? `${id1}|${id2}` : `${id2}|${id1}`;
+  }
+
+  function renderMeta(targetEl, feat){
+    // show a compact set of chips
+    const chips = [
+      { k: "GPA", v: feat[IDX.gpa] },
+      { k: "Calc", v: feat[IDX.calc] },
+      { k: "Upper", v: feat[IDX.upper] },
+      { k: "Resume", v: feat[IDX.rlen] },
+      { k: "Research", v: feat[IDX.research] },
+      { k: "Teach", v: feat[IDX.teach] },
+      { k: "Lead", v: feat[IDX.leader] },
+      { k: "Essays", v: (feat[IDX.emLen] + feat[IDX.ecLen]) / 2 },
+      { k: "Penalty", v: feat[IDX.pen] }
+    ];
+
+    targetEl.innerHTML = chips.map(c =>
+      `<div class="chip"><strong>${c.k}</strong> ${Number(c.v).toFixed(1)}</div>`
+    ).join("");
+  }
+
+  function pickNewPair(){
+    if (applicants.length < 2) return null;
+
+    // Try up to N attempts to find an unseen pair
+    for (let t = 0; t < 2000; t++){
+      const i = Math.floor(Math.random() * applicants.length);
+      let j = Math.floor(Math.random() * applicants.length);
+      if (j === i) continue;
+
+      const a = applicants[i];
+      const b = applicants[j];
+      const key = pairKey(a.id, b.id);
+      if (seen.has(key)) continue;
+
+      return { a, b, key };
+    }
+
+    return null;
+  }
+
+  function showPair(a, b, key){
+    curA = a;
+    curB = b;
+    seen.add(key);
+
+    el("arena").style.display = "grid";
+    el("aid").textContent = `A — ${a.id}`;
+    el("aname").textContent = safeName(a);
+    renderMeta(el("ameta"), a.features);
+
+    el("bid").textContent = `B — ${b.id}`;
+    el("bname").textContent = safeName(b);
+    renderMeta(el("bmeta"), b.features);
+
+    setStatus(`Loaded ${applicants.length} applicants • ${pairs.length} comparisons • ${seen.size} pairs seen`);
+  }
+
+  function nextPair(){
+    const picked = pickNewPair();
+    if (!picked){
+      setStatus(`No more unseen pairs available. Export pairs.csv and/or add more applicants.`);
+      return;
+    }
+    showPair(picked.a, picked.b, picked.key);
+  }
+
+  function recordResult(winner){ // "A" or "B"
+    if (!curA || !curB) return;
+    // store direction in current orientation: i=curA.id, j=curB.id
+    const row = {
+      i: curA.id,
+      j: curB.id,
+      y: (winner === "A") ? 1 : 0
+    };
+    pairs.push(row);
+    nextPair();
+  }
+
+  function downloadPairs(){
+    if (!pairs.length){
+      alert("No comparisons yet.");
+      return;
+    }
+    const tag = (el("sessionTag").value || "").trim();
+    const fname = tag ? `pairs_${tag}.csv` : `pairs.csv`;
+
+    const header = "i,j,y\n";
+    const body = pairs.map(r => `${r.i},${r.j},${r.y}`).join("\n") + "\n";
+    const blob = new Blob([header + body], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fname;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function loadJsonlFile(file){
+    const text = await file.text();
+    const lines = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    const out = [];
+    for (let idx = 0; idx < lines.length; idx++){
+      try{
+        const obj = JSON.parse(lines[idx]);
+        if (!obj || !obj.id || !Array.isArray(obj.features)) continue;
+        out.push({
+          id: String(obj.id),
+          features: obj.features.map(Number),
+          meta: obj.meta || {}
+        });
+      }catch{
+        // ignore bad lines
+      }
+    }
+    return out;
+  }
+
+  // ==========================
+  // UI wiring
+  // ==========================
+  el("jsonlFile").addEventListener("change", async (e) => {
+    const f = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+    if (!f) return;
+
+    setStatus("Loading applicants.jsonl…");
+    try{
+      applicants = await loadJsonlFile(f);
+      pairs = [];
+      seen = new Set();
+      curA = null;
+      curB = null;
+
+      el("btnStart").disabled = applicants.length < 2;
+      el("btnNext").disabled = applicants.length < 2;
+      el("btnDownload").disabled = applicants.length < 2;
+
+      setStatus(`Loaded ${applicants.length} applicants. Click "Start Labeling".`);
+      el("debugWrap").style.display = "block";
+      el("debug").textContent = JSON.stringify({
+        loaded: applicants.length,
+        sample_ids: applicants.slice(0, 10).map(a => a.id)
+      }, null, 2);
+    }catch(err){
+      setStatus(`Error loading file: ${err && err.message ? err.message : "unknown"}`);
+    }
+  });
+
+  el("btnStart").addEventListener("click", () => {
+    if (applicants.length < 2){
+      setStatus("Need at least 2 applicants.");
+      return;
+    }
+    nextPair();
+  });
+
+  el("btnNext").addEventListener("click", () => {
+    nextPair();
+  });
+
+  el("btnA").addEventListener("click", () => recordResult("A"));
+  el("btnB").addEventListener("click", () => recordResult("B"));
+
+  el("btnDownload").addEventListener("click", () => downloadPairs());
+
+  el("btnReset").addEventListener("click", () => {
+    applicants = [];
+    pairs = [];
+    seen = new Set();
+    curA = null;
+    curB = null;
+
+    el("jsonlFile").value = "";
+    el("sessionTag").value = "";
+    el("arena").style.display = "none";
+    el("debugWrap").style.display = "none";
+
+    el("btnStart").disabled = true;
+    el("btnNext").disabled = true;
+    el("btnDownload").disabled = true;
+
+    setStatus("Reset complete.");
+  });
+</script>
+</body>
+</html>

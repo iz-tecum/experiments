@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Feature Extractor (PME Ranker)</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- PDF.js (free) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.js"></script>
+
+  <!-- Shared feature engine (single source of truth) -->
+  <script src="../features.js"></script>
+
+  <style>
+    body{ margin:0; font-family:Montserrat,system-ui,-apple-system,Segoe UI,sans-serif; color:#0b1220; }
+    .wrap{ max-width: 980px; margin:0 auto; padding: 22px; }
+    h1{ margin: 0 0 10px; font-size: 28px; }
+    .muted{ color: rgba(16,24,40,.72); line-height:1.6; }
+    .card{ border: 1px solid rgba(16,24,40,.14); border-radius: 14px; padding: 16px; margin-top: 14px; }
+    label{ display:block; margin: 12px 0 6px; font-size: 12px; letter-spacing:.08em; text-transform: uppercase; font-weight: 700; color: rgba(16,24,40,.78); }
+    input, select, textarea{ width:100%; padding: 12px; border:1px solid rgba(16,24,40,.14); border-radius: 12px; font-family:inherit; background:#fff; }
+    textarea{ min-height: 110px; resize: vertical; line-height:1.6; }
+    .row{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media(max-width:820px){ .row{ grid-template-columns:1fr; } }
+    button{ border:0; border-radius: 12px; padding: 12px 14px; font-weight: 800; letter-spacing:.10em; text-transform: uppercase; cursor:pointer; }
+    .primary{ background: rgba(16,24,40,.92); color:#fff; }
+    .ghost{ background: rgba(16,24,40,.06); color: rgba(16,24,40,.92); }
+    pre{ white-space: pre-wrap; background: rgba(16,24,40,.04); padding: 12px; border-radius: 12px; border: 1px solid rgba(16,24,40,.10); }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <h1>Feature Extractor</h1>
+    <p class="muted">
+      Admin tool. Upload an applicant’s resume + essays and generate a single JSONL line for <code>applicants.jsonl</code>.
+      Keep this page private.
+    </p>
+
+    <div class="card">
+      <div class="row">
+        <div>
+          <label>Applicant ID (required)</label>
+          <input id="id" placeholder="a001"/>
+        </div>
+        <div>
+          <label>Display name (optional)</label>
+          <input id="name" placeholder="a001 — Jane Doe"/>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Overall GPA (0.0–4.0)</label>
+          <input id="gpa" type="number" min="0" max="4" step="0.01" placeholder="3.78"/>
+        </div>
+        <div>
+          <label>Completed Calc I &amp; II (binary)</label>
+          <select id="calc">
+            <option value="">Select</option>
+            <option value="yes">Yes (10)</option>
+            <option value="no">No (0)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label># courses at/above calculus (excluding Calc I/II)</label>
+          <input id="upperCount" type="number" min="0" max="20" step="1" placeholder="2"/>
+        </div>
+        <div>
+          <label>Highest level among those courses</label>
+          <select id="upperRigor">
+            <option value="">Select</option>
+            <option value="standard">Standard (MVC/LA/ODE)</option>
+            <option value="proof">Proof-based</option>
+            <option value="upper">Upper-level (analysis/algebra/etc.)</option>
+            <option value="grad">Graduate / research</option>
+          </select>
+        </div>
+      </div>
+
+      <label>Resume PDF</label>
+      <input id="resume" type="file" accept="application/pdf"/>
+
+      <label>Short Answer 1 (Math maturity)</label>
+      <textarea id="essayMath" placeholder="Describe a theorem/proof/problem you found beautiful. What was the key idea?"></textarea>
+
+      <label>Short Answer 2 (Community contribution)</label>
+      <textarea id="essayCommunity" placeholder="How would you contribute to the chapter this term?"></textarea>
+
+      <div class="row" style="margin-top:12px;">
+        <button class="primary" id="btnGen" type="button">Generate JSONL Line</button>
+        <button class="ghost" id="btnClear" type="button">Clear</button>
+      </div>
+
+      <p class="muted" id="status" style="margin-top:10px;"></p>
+
+      <div id="outWrap" style="display:none; margin-top:12px;">
+        <div class="row">
+          <button class="primary" id="btnCopy" type="button">Copy JSONL</button>
+          <button class="ghost" id="btnDownload" type="button">Download .jsonl</button>
+        </div>
+        <pre id="out" style="margin-top:12px;"></pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0 0 10px;">Feature Definitions (v1)</h2>
+      <p class="muted" style="margin:0 0 10px;">
+        These are the feature names and order used to build the vector. Keep this stable across the cycle.
+      </p>
+      <pre id="featNames"></pre>
+    </div>
+  </div>
+
+  <script>
+    const el = (id) => document.getElementById(id);
+
+    // PDF.js resume text extraction (free)
+    async function extractPdfText(file){
+      if (!file) return "";
+      const buf = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      const maxPages = pdf.numPages;
+      let text = "";
+
+      for (let p = 1; p <= maxPages; p++){
+        el("status").textContent = `Extracting PDF text… page ${p}/${maxPages}`;
+        const page = await pdf.getPage(p);
+        const content = await page.getTextContent();
+        const strings = content.items.map(it => it.str || "");
+        text += strings.join(" ") + "\n";
+      }
+      return text.trim();
+    }
+
+    // Export: JSONL line
+    function makeJsonlLine({ id, name, features }){
+      const obj = {
+        id,
+        features,
+        meta: {
+          name: name || "",
+          feature_version: PMEFeatures.FEATURE_VERSION
+        }
+      };
+      return JSON.stringify(obj);
+    }
+
+    function downloadText(filename, text){
+      const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    async function copyToClipboard(text){
+      try{
+        await navigator.clipboard.writeText(text);
+        el("status").textContent = "Copied JSONL line to clipboard.";
+      }catch{
+        el("status").textContent = "Copy failed. You can manually copy from the preview box.";
+      }
+    }
+
+    // Show stable feature schema
+    el("featNames").textContent =
+      JSON.stringify(
+        { feature_version: PMEFeatures.FEATURE_VERSION, feature_names: PMEFeatures.FEATURE_NAMES },
+        null,
+        2
+      );
+
+    el("btnGen").addEventListener("click", async () => {
+      el("status").textContent = "";
+      el("outWrap").style.display = "none";
+      el("out").textContent = "";
+
+      const id = (el("id").value || "").trim();
+      const name = (el("name").value || "").trim();
+
+      const gpa = PMEFeatures.safeNum(el("gpa").value, NaN);
+      const calcVal = el("calc").value || "";
+
+      const upperCount = parseInt(el("upperCount").value || "0", 10);
+      const upperRigor = el("upperRigor").value || "";
+
+      const resumeFile = el("resume").files && el("resume").files[0] ? el("resume").files[0] : null;
+      const essayMath = el("essayMath").value || "";
+      const essayComm = el("essayCommunity").value || "";
+
+      if (!id){
+        el("status").textContent = "Applicant ID is required (e.g., a001).";
+        return;
+      }
+      if (!resumeFile){
+        el("status").textContent = "Upload a resume PDF before generating features.";
+        return;
+      }
+      if (!Number.isFinite(gpa)){
+        el("status").textContent = "Enter a valid GPA.";
+        return;
+      }
+      if (!calcVal){
+        el("status").textContent = "Select Calc I/II completion.";
+        return;
+      }
+      if (!upperRigor){
+        el("status").textContent = "Select the highest level among upper courses.";
+        return;
+      }
+
+      try{
+        el("status").textContent = "Extracting PDF text…";
+        const resumeText = await extractPdfText(resumeFile);
+
+        el("status").textContent = "Building feature vector…";
+        const features = PMEFeatures.buildFeatures({
+          gpa,
+          calcVal,
+          upperCount,
+          upperRigor,
+          resumeText,
+          essayMath,
+          essayComm
+        });
+
+        const jsonl = makeJsonlLine({ id, name, features });
+        el("outWrap").style.display = "block";
+        el("out").textContent = jsonl;
+
+        el("btnCopy").onclick = () => copyToClipboard(jsonl);
+        el("btnDownload").onclick = () => downloadText(`applicant_${id}.jsonl`, jsonl + "\n");
+
+        el("status").textContent = "Done. Copy or download the JSONL line.";
+      }catch(e){
+        el("status").textContent = `Error: ${e && e.message ? e.message : "unknown"}`;
+      }
+    });
+
+    el("btnClear").addEventListener("click", () => {
+      ["id","name","gpa","calc","upperCount","upperRigor","resume","essayMath","essayCommunity"].forEach(k => {
+        const node = el(k);
+        if (!node) return;
+        if (node.type === "file") node.value = "";
+        else node.value = "";
+      });
+      el("status").textContent = "";
+      el("outWrap").style.display = "none";
+      el("out").textContent = "";
+    });
+  </script>
+</body>
+</html>
