@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PME Eligibility & Interest Score</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- PDF.js (free) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.js"></script>
+
+  <!-- Shared deterministic features + ranker -->
+  <script src="./features.js"></script>
+  <script src="./rank.js"></script>
+
+  <style>
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: Montserrat, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:#ffffff;
+      color:#0b1220;
+    }
+    :root{
+      --container: 980px;
+      --padX: 22px;
+      --muted: rgba(16,24,40,.72);
+      --border: rgba(16,24,40,.14);
+      --card: rgba(16,24,40,.04);
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .wrap{ max-width: var(--container); margin: 0 auto; padding: 28px var(--padX) 64px; }
+    h1{ margin: 0 0 10px; font-size: 36px; letter-spacing:-0.02em; font-weight: 600; }
+    .sub{ margin:0 0 26px; color: var(--muted); line-height:1.7; max-width: 900px; }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    .card{
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 10px 30px rgba(16,24,40,.06);
+    }
+    .card h2{
+      margin: 0 0 10px;
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: .02em;
+    }
+    label{
+      display:block;
+      font-size: 12px;
+      letter-spacing:.06em;
+      text-transform: uppercase;
+      color: rgba(16,24,40,.78);
+      margin: 14px 0 8px;
+      font-weight: 600;
+    }
+    input[type="number"], input[type="file"], select, textarea{
+      width:100%;
+      padding: 12px 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+      background:#fff;
+      transition: border-color 200ms var(--ease), box-shadow 200ms var(--ease);
+    }
+    textarea{ min-height: 120px; resize: vertical; line-height:1.6; }
+    input:focus, select:focus, textarea:focus{
+      border-color: rgba(16,24,40,.28);
+      box-shadow: 0 0 0 4px rgba(16,24,40,.08);
+    }
+    .row{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 820px){
+      .row{ grid-template-columns: 1fr; }
+      h1{ font-size: 30px; }
+    }
+    .note{
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height:1.65;
+    }
+    .actions{
+      display:flex;
+      gap: 10px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+      align-items:center;
+    }
+    button{
+      appearance:none;
+      border: 0;
+      cursor:pointer;
+      font-family: inherit;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-weight: 700;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      font-size: 12px;
+      transition: transform 160ms var(--ease), opacity 160ms var(--ease), background-color 160ms var(--ease);
+    }
+    button:disabled{ opacity:.55; cursor:not-allowed; transform:none!important; }
+    .btn-primary{
+      background: rgba(16,24,40,.92);
+      color: #fff;
+    }
+    .btn-primary:hover{ opacity:.95; transform: translateY(-1px); }
+    .btn-ghost{
+      background: rgba(16,24,40,.06);
+      color: rgba(16,24,40,.92);
+    }
+    .btn-ghost:hover{ opacity:.95; transform: translateY(-1px); }
+    .status{
+
+      font-size: 13px;
+      color: rgba(16,24,40,.82);
+      margin-left: 4px;
+    }
+    .status.muted{ color: var(--muted); }
+
+    .results{
+      margin-top: 14px;
+      padding: 16px;
+      border-radius: 14px;
+      background: var(--card);
+      border: 1px solid rgba(16,24,40,.10);
+    }
+    .big{
+      font-size: 42px;
+      font-weight: 700;
+      letter-spacing:-0.02em;
+      margin: 0;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      letter-spacing:.10em;
+      text-transform: uppercase;
+      font-weight: 700;
+      border: 1px solid rgba(16,24,40,.12);
+      background:#fff;
+      margin-top: 10px;
+    }
+    .breakdown{
+      margin-top: 12px;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .bd{
+      background:#fff;
+      border: 1px solid rgba(16,24,40,.10);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 13px;
+      color: rgba(16,24,40,.86);
+    }
+    .bd strong{ font-weight: 700; }
+
+    .tiny{ font-size: 12px; color: var(--muted); line-height:1.6; margin-top: 10px; }
+    .tiny strong{ color: rgba(16,24,40,.86); }
+
+    .err{
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(220,38,38,.06);
+      border: 1px solid rgba(220,38,38,.18);
+      color: rgba(127,29,29,.92);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <h1>PME Eligibility &amp; Interest Score</h1>
+    <p class="sub">
+      This tool estimates a holistic score (1.0–10.0) using a learning-to-rank model trained on pairwise comparisons.
+      Final membership is determined by chapter nomination and election.
+    </p>
+
+    <div class="grid">
+
+      <div class="card">
+        <h2>Academic Signals</h2>
+
+        <div class="row">
+          <div>
+            <label for="gpa">Overall GPA (0.0–4.0)</label>
+            <input id="gpa" type="number" min="0" max="4" step="0.01" placeholder="3.78" />
+            <p class="note">Target minimum is 3.40. Below 3.40 scores lower but still contributes holistically.</p>
+          </div>
+
+          <div>
+            <label for="calc">Completed Calculus I &amp; II (or equivalent)</label>
+            <select id="calc">
+              <option value="">Select</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+            <p class="note">Binary signal in this model: Yes=10, No=0.</p>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="upperCount"># math courses at/above calculus (excluding Calc I/II)</label>
+            <input id="upperCount" type="number" min="0" max="20" step="1" placeholder="2" />
+          </div>
+          <div>
+            <label for="upperRigor">Highest level among those courses</label>
+            <select id="upperRigor">
+              <option value="">Select</option>
+              <option value="standard">Standard (multivariable, linear algebra, ODE, etc.)</option>
+              <option value="proof">Proof-based</option>
+              <option value="upper">Upper-level (analysis, algebra, topology, complex, etc.)</option>
+              <option value="grad">Graduate / research seminar</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Materials</h2>
+
+        <label for="resume">Resume (PDF)</label>
+        <input id="resume" type="file" accept="application/pdf" />
+
+        <label for="essayMath">Short Answer 1 (Math maturity)</label>
+        <textarea id="essayMath" placeholder="Describe a theorem/proof/problem you found beautiful. What was the key idea?"></textarea>
+
+        <label for="essayCommunity">Short Answer 2 (Community contribution)</label>
+        <textarea id="essayCommunity" placeholder="How would you contribute to the chapter this term?"></textarea>
+
+        <label for="poolFile">Optional: applicants.jsonl (pool calibration)</label>
+        <input id="poolFile" type="file" accept=".jsonl,text/plain" />
+        <p class="note">
+          If you upload a pool file, your score will be percentile-calibrated against that pool.
+          If not, we’ll show a neutral score and still display raw + feature breakdown.
+        </p>
+
+        <div class="actions">
+          <button class="btn-primary" id="btnScore" type="button">Calculate Score</button>
+          <button class="btn-ghost" id="btnReset" type="button">Reset</button>
+          <span id="status" class="status muted"></span>
+        </div>
+
+        <div id="out" class="results" style="display:none;"></div>
+      </div>
+
+    </div>
+  </div>
+
+<script>
+  const el = (id) => document.getElementById(id);
+
+  function setStatus(msg, muted = true){
+    const s = el("status");
+    s.textContent = msg || "";
+    s.classList.toggle("muted", !!muted);
+  }
+
+  function disableUI(disabled){
+    el("btnScore").disabled = disabled;
+    el("btnReset").disabled = disabled;
+  }
+
+  // PDF.js extraction
+  async function extractPdfText(file){
+    if (!file) return "";
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    const maxPages = pdf.numPages;
+    let text = "";
+    for (let p = 1; p <= maxPages; p++){
+      setStatus(`Extracting resume text… page ${p}/${maxPages}`, true);
+      const page = await pdf.getPage(p);
+      const content = await page.getTextContent();
+      const strings = content.items.map(it => it.str || "");
+      text += strings.join(" ") + "\n";
+    }
+    return text.trim();
+  }
+
+  async function loadPoolRawScores(file, model){
+    if (!file) return null;
+    const text = await file.text();
+    const lines = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    const rawAll = [];
+    for (const line of lines){
+      try{
+        const obj = JSON.parse(line);
+        if (!obj || !Array.isArray(obj.features)) continue;
+        const raw = PMERanker.scoreRaw(model, obj.features.map(Number));
+        rawAll.push(raw);
+      }catch{
+        // ignore bad line
+      }
+    }
+    return rawAll.length ? rawAll : null;
+  }
+
+  function readinessLabel(calcScore, upperCount){
+    if (calcScore === 10 && upperCount >= 2) return "Likely eligible";
+    if (calcScore === 10) return "Possibly eligible";
+    return "Not eligible (yet)";
+  }
+
+  function escapeHtml(s = "") {
+    return String(s)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  el("btnScore").addEventListener("click", async () => {
+    disableUI(true);
+    setStatus("Loading model…", true);
+
+    const out = el("out");
+    out.style.display = "none";
+    out.innerHTML = "";
+
+    const gpa = PMEFeatures.safeNum(el("gpa").value, NaN);
+    const calcVal = el("calc").value;
+    const upperCount = parseInt(el("upperCount").value || "0", 10);
+    const upperRigor = el("upperRigor").value;
+
+    const resumeFile = el("resume").files && el("resume").files[0] ? el("resume").files[0] : null;
+    const essayMath = el("essayMath").value || "";
+    const essayComm = el("essayCommunity").value || "";
+
+    const poolFile = el("poolFile").files && el("poolFile").files[0] ? el("poolFile").files[0] : null;
+
+    const flags = [];
+    if (!Number.isFinite(gpa)) flags.push("Missing/invalid GPA");
+    if (!calcVal) flags.push("Missing Calc I/II selection");
+    if (!upperRigor) flags.push("Missing upper-level rigor selection");
+    if (!resumeFile) flags.push("Missing resume PDF");
+
+    if (flags.length){
+      out.style.display = "block";
+      out.innerHTML = `<div class="err"><strong>Fix these first</strong><br>${flags.map(f => `• ${escapeHtml(f)}`).join("<br>")}</div>`;
+      setStatus("Missing inputs.", false);
+      disableUI(false);
+      return;
+    }
+
+    try{
+      const model = await PMERanker.loadModel(); // loads ./public/model/rank_model.json
+      setStatus("Extracting resume…", true);
+      const resumeText = await extractPdfText(resumeFile);
+
+      setStatus("Building features…", true);
+      const features = PMEFeatures.buildFeatures({
+        gpa,
+        calcVal,
+        upperCount,
+        upperRigor,
+        resumeText,
+        essayMath,
+        essayComm
+      });
+
+      setStatus("Scoring…", true);
+      const raw = PMERanker.scoreRaw(model, features);
+
+      // Optional pool calibration
+      let poolRaw = null;
+      if (poolFile){
+        setStatus("Calibrating vs pool…", true);
+        poolRaw = await loadPoolRawScores(poolFile, model);
+      }
+
+      const score_0_10 = PMERanker.percentileScore(raw, poolRaw || [raw]);
+
+      const readiness = readinessLabel(PMEFeatures.scoreCalc(calcVal), upperCount);
+
+      out.style.display = "block";
+      out.innerHTML = `
+        <p class="big">${score_0_10.toFixed(1)}</p>
+        <div class="pill">${escapeHtml(readiness)}</div>
+        <p class="note" style="margin-top:10px;">
+          This score is percentile-calibrated ${poolRaw ? "against the uploaded pool" : "in solo mode (no pool uploaded)"}.
+          Final membership is determined by chapter nomination and election.
+        </p>
+
+        <div class="breakdown">
+          <div class="bd"><strong>Raw model score</strong> ${raw.toFixed(3)}</div>
+          <div class="bd"><strong>GPA score</strong> ${features[0].toFixed(1)} / 10</div>
+          <div class="bd"><strong>Calc I/II</strong> ${features[1].toFixed(1)} / 10</div>
+          <div class="bd"><strong>Upper courses</strong> ${features[2].toFixed(1)} / 10</div>
+          <div class="bd"><strong>Resume length</strong> ${features[3].toFixed(1)} / 10</div>
+          <div class="bd"><strong>Research keywords</strong> ${features[9].toFixed(1)} / 10</div>
+          <div class="bd"><strong>Leadership keywords</strong> ${features[11].toFixed(1)} / 10</div>
+          <div class="bd"><strong>Penalty</strong> ${features[20].toFixed(1)} / 10</div>
+        </div>
+
+        <p class="tiny"><strong>Note</strong><br>
+          If you want the 0–10 score to be meaningful, upload <code>applicants.jsonl</code> as a pool.
+          Otherwise you still get a valid raw model score and feature breakdown.
+        </p>
+      `;
+
+      setStatus("Done.", true);
+    }catch(e){
+      out.style.display = "block";
+      out.innerHTML = `<div class="err"><strong>Error</strong><br>${escapeHtml(e && e.message ? e.message : "unknown")}</div>`;
+      setStatus("Error.", false);
+    }finally{
+      disableUI(false);
+    }
+  });
+
+  el("btnReset").addEventListener("click", () => {
+    ["gpa","calc","upperCount","upperRigor","resume","essayMath","essayCommunity","poolFile"].forEach(id => {
+      const node = el(id);
+      if (!node) return;
+      if (node.type === "file") node.value = "";
+      else node.value = "";
+    });
+    setStatus("", true);
+    el("out").style.display = "none";
+    el("out").innerHTML = "";
+  });
+</script>
+</body>
+</html>
