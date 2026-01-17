@@ -10,8 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <!-- PDF.js (free) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.js"></script>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <!-- Shared deterministic features + ranker -->
   <script src="./features.js"></script>
   <script src="./rank.js"></script>
@@ -285,42 +284,39 @@
     el("btnReset").disabled = disabled;
   }
 
-  // Robust access to PDF.js global + worker setup (fixes "pdfjsLib is not defined")
-  function getPdfjs(){
-    if (window.pdfjsLib) return window.pdfjsLib;
-    if (window["pdfjs-dist/build/pdf"]) return window["pdfjs-dist/build/pdf"];
-    throw new Error("PDF.js failed to load (pdfjsLib not found).");
+// Robust access to PDF.js global + worker setup
+function getPdfjs(){
+  if (window.pdfjsLib) return window.pdfjsLib;
+  throw new Error("PDF.js failed to load (pdfjsLib not found).");
+}
+
+function ensurePdfWorker(pdfjs){
+  // Match the SAME version as the script tag above
+  pdfjs.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
+}
+
+// PDF extraction
+async function extractPdfText(file){
+  if (!file) return "";
+  const buf = await file.arrayBuffer();
+
+  const pdfjs = getPdfjs();
+  ensurePdfWorker(pdfjs);
+
+  const pdf = await pdfjs.getDocument({ data: buf }).promise;
+  const maxPages = pdf.numPages;
+  let text = "";
+
+  for (let p = 1; p <= maxPages; p++){
+    setStatus(`Extracting resume text… page ${p}/${maxPages}`, true);
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    const strings = content.items.map(it => it.str || "");
+    text += strings.join(" ") + "\n";
   }
-
-  function ensurePdfWorker(pdfjs){
-    // Some builds require workerSrc to be set explicitly
-    if (!pdfjs.GlobalWorkerOptions.workerSrc){
-      pdfjs.GlobalWorkerOptions.workerSrc =
-        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js";
-    }
-  }
-
-  // PDF extraction
-  async function extractPdfText(file){
-    if (!file) return "";
-    const buf = await file.arrayBuffer();
-
-    const pdfjs = getPdfjs();
-    ensurePdfWorker(pdfjs);
-
-    const pdf = await pdfjs.getDocument({ data: buf }).promise;
-    const maxPages = pdf.numPages;
-    let text = "";
-
-    for (let p = 1; p <= maxPages; p++){
-      setStatus(`Extracting resume text… page ${p}/${maxPages}`, true);
-      const page = await pdf.getPage(p);
-      const content = await page.getTextContent();
-      const strings = content.items.map(it => it.str || "");
-      text += strings.join(" ") + "\n";
-    }
-    return text.trim();
-  }
+  return text.trim();
+}
 
   async function loadPoolRawScores(file, model){
     if (!file) return null;
