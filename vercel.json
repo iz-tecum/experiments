@@ -1,0 +1,7 @@
+{
+  "cleanUrls": true,
+  "routes": [
+    { "src": "/model/(.*)", "dest": "/public/model/$1" },
+    { "src": "/(.*)", "dest": "/$1" }
+  ]
+}
