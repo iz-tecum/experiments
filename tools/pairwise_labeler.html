@@ -3,29 +3,237 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Pairwise Labeler (PME Ranker)</title>
+  <title>PME Pairwise Labeler</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Match public/index.html font import -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
 
   <style>
-    body{ margin:0; font-family:Montserrat,system-ui,-apple-system,Segoe UI,sans-serif; color:#0b1220; background:#fff; }
-    .wrap{ max-width: 1080px; margin:0 auto; padding: 22px; }
-    h1{ margin: 0 0 10px; font-size: 28px; letter-spacing:-0.02em; }
-    .muted{ color: rgba(16,24,40,.72); line-height:1.6; }
-    .card{ border: 1px solid rgba(16,24,40,.14); border-radius: 14px; padding: 16px; margin-top: 14px; }
-    label{ display:block; margin: 12px 0 6px; font-size: 12px; letter-spacing:.08em; text-transform: uppercase; font-weight: 700; color: rgba(16,24,40,.78); }
-    input[type="file"], input[type="text"]{
-      width:100%; padding: 12px; border:1px solid rgba(16,24,40,.14); border-radius: 12px; font-family:inherit;
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: Montserrat, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:#f6f6f9;
+      color:#0b1220;
     }
-    button{ border:0; border-radius: 12px; padding: 12px 14px; font-weight: 800; letter-spacing:.10em; text-transform: uppercase; cursor:pointer; }
-    button:disabled{ opacity:.55; cursor:not-allowed; }
-    .primary{ background: rgba(16,24,40,.92); color:#fff; }
-    .ghost{ background: rgba(16,24,40,.06); color: rgba(16,24,40,.92); }
-    .danger{ background: rgba(220,38,38,.10); color: rgba(127,29,29,.92); }
-    .row{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    @media(max-width:920px){ .row{ grid-template-columns:1fr; } }
+
+    :root{
+      --container: 1060px;
+      --padX: 22px;
+
+      /* PME purple */
+      --pme-purple: #6d4cff;
+      --pme-purple-2: #a855f7;
+
+      --ink: rgba(17,10,35,.92);
+      --muted: rgba(17,10,35,.70);
+
+      --border: rgba(17,10,35,.16);
+      --border2: rgba(109,76,255,.30);
+
+      --card-bg: #ffffff;
+      --shadow: 0 10px 26px rgba(17,10,35,.06);
+
+      /* BLOCKY: hard corners */
+      --r: 0px;
+
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+      /* Hero bg */
+      --hero-bg: #eadcff;
+    }
+
+    .wrap{ max-width: var(--container); margin: 0 auto; padding: 18px var(--padX) 90px; }
+
+    /* HERO STRIP (match index.html) */
+    .hero-strip{
+      background: var(--hero-bg);
+      color: var(--ink);
+      padding: 22px var(--padX);
+      border-bottom: 0px solid rgba(17,10,35,.10);
+    }
+    .hero-inner{
+      max-width: var(--container);
+      margin: 0 auto;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 18px;
+    }
+    .hero-left{ min-width: 0; }
+    .kicker{
+      font-size: 12px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      font-weight: 800;
+      color: var(--pme-purple);
+      opacity: 1;
+    }
+    h1{
+      margin: 10px 0 0;
+      font-size: clamp(30px, 3.2vw, 46px);
+      letter-spacing: -0.03em;
+      font-weight: 800;
+      line-height: 1.02;
+      color: var(--ink);
+    }
+    .hero-sub{
+      margin: 10px 0 0;
+      color: rgba(17,10,35,.72);
+      font-size: 13px;
+      line-height:1.65;
+      max-width: 820px;
+    }
+    .hero-logo{
+      width: 90px;
+      height: 90px;
+      object-fit: contain;
+      flex: 0 0 auto;
+      filter: drop-shadow(0 10px 18px rgba(17,10,35,.10));
+    }
+    @media (max-width: 640px){
+      .hero-logo{ width: 72px; height: 72px; }
+    }
+
+    /* Cards (match index.html) */
+    .card{
+      border: 2px solid rgba(17,10,35,.12);
+      background: var(--card-bg);
+      border-radius: var(--r);
+      padding: 18px;
+      box-shadow: var(--shadow);
+      margin-top: 16px;
+    }
+    .card-title{
+      margin: 0 0 12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+    }
+    .card-title h2{
+      margin:0;
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: rgba(17,10,35,.86);
+    }
+
+    .row{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      align-items:start;
+    }
+    @media (max-width: 900px){
+      .row{ grid-template-columns: 1fr; }
+    }
+
+    label{
+      display:block;
+      font-size: 11px;
+      letter-spacing:.14em;
+      text-transform: uppercase;
+      color: rgba(17,10,35,.72);
+      margin: 14px 0 8px;
+      font-weight: 900;
+    }
+
+    input[type="file"], input[type="text"]{
+      width:100%;
+      height: 52px;
+      padding: 14px 12px;
+      border: 2px solid rgba(17,10,35,.16);
+      border-radius: var(--r);
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+      background:#fff;
+      transition: border-color 180ms var(--ease), box-shadow 180ms var(--ease);
+      line-height: 1.2;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    input[type="file"]{ height:auto; padding: 12px; }
+
+    input:focus{
+      border-color: rgba(109,76,255,.85);
+      box-shadow: 0 0 0 3px rgba(109,76,255,.18);
+    }
+
+    .note{
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height:1.65;
+    }
+    code{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12px; }
+
+    .controls{
+      display:flex;
+      gap: 10px;
+      margin-top: 16px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    .btn{
+      appearance:none;
+      border: 2px solid rgba(17,10,35,.16);
+      cursor:pointer;
+      font-family: inherit;
+      border-radius: var(--r);
+      padding: 16px 20px;
+      font-weight: 900;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      font-size: 12px;
+      user-select:none;
+      white-space:nowrap;
+      background:#fff;
+      color: rgba(17,10,35,.92);
+      transition: none;
+    }
+    .btn:disabled{ opacity:.55; cursor:not-allowed; }
+
+    .btn-primary{
+      background: #eadcff;
+      border-color: #eadcff;
+      border: 0;
+      color:#000000;
+    }
+    .btn-ghost{
+      background: rgba(17,10,35,.06);
+      border-color: rgba(17,10,35,.14);
+      border: 0;
+      color: rgba(17,10,35,.92);
+    }
+    .btn-danger{
+      background: rgba(220,38,38,.06);
+      border-color: rgba(220,38,38,.22);
+      color: rgba(127,29,29,.92);
+    }
+
+    .statline{
+      font-size: 13px;
+      color: rgba(17,10,35,.82);
+      margin-left: 2px;
+    }
+
+    .warn{
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: var(--r);
+      background: rgba(245,158,11,.10);
+      border: 2px solid rgba(245,158,11,.22);
+      color: rgba(120,53,15,.92);
+      font-size: 13px;
+      line-height: 1.55;
+      display:none;
+    }
 
     .arena{
       margin-top: 14px;
@@ -34,105 +242,144 @@
       gap: 12px;
       align-items: stretch;
     }
-    @media(max-width:920px){ .arena{ grid-template-columns:1fr; } }
+    @media (max-width: 900px){
+      .arena{ grid-template-columns:1fr; }
+    }
 
     .panel{
-      border: 1px solid rgba(16,24,40,.14);
-      border-radius: 14px;
-      padding: 14px;
-      background: rgba(16,24,40,.02);
-      min-height: 210px;
+      border: 2px solid rgba(17,10,35,.12);
+      border-radius: var(--r);
+      padding: 18px;
+      background: #fff;
+      box-shadow: var(--shadow);
+      min-height: 260px;
       display:flex;
       flex-direction: column;
       justify-content: space-between;
-      gap: 10px;
+      gap: 12px;
     }
+
     .pid{
-      font-weight: 800;
-      letter-spacing:.08em;
+      font-weight: 900;
+      letter-spacing:.12em;
       text-transform: uppercase;
       font-size: 12px;
-      color: rgba(16,24,40,.70);
+      color: rgba(17,10,35,.70);
     }
     .pname{
       font-size: 18px;
-      font-weight: 700;
+      font-weight: 800;
       letter-spacing:-0.01em;
       margin: 2px 0 0;
+      color: rgba(17,10,35,.92);
     }
+
     .meta{
       display:grid;
       grid-template-columns: 1fr 1fr;
       gap: 8px;
-      margin-top: 8px;
+      margin-top: 10px;
     }
+    @media (max-width: 560px){
+      .meta{ grid-template-columns:1fr; }
+    }
+
     .chip{
       background: #fff;
-      border: 1px solid rgba(16,24,40,.10);
-      border-radius: 12px;
+      border: 2px solid rgba(17,10,35,.10);
+      border-radius: var(--r);
       padding: 10px 10px;
       font-size: 13px;
-      color: rgba(16,24,40,.86);
+      color: rgba(17,10,35,.86);
     }
-    .chip strong{ font-weight: 800; }
+    .chip strong{ font-weight: 900; letter-spacing:.02em; }
 
-    .controls{
-      margin-top: 12px;
-      display:flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items:center;
+    details summary{
+      cursor:pointer;
+      font-weight: 900;
+      letter-spacing:.14em;
+      text-transform: uppercase;
+      font-size: 12px;
+      color: rgba(17,10,35,.86);
     }
 
     pre{
       white-space: pre-wrap;
-      background: rgba(16,24,40,.04);
+      background: rgba(17,10,35,.04);
       padding: 12px;
-      border-radius: 12px;
-      border: 1px solid rgba(16,24,40,.10);
+      border-radius: var(--r);
+      border: 2px solid rgba(17,10,35,.10);
       font-size: 12px;
       line-height: 1.5;
+      margin: 10px 0 0;
     }
+/* Force equal heights */
+:root { --fieldH: 54px; }
 
-    .statline{
-      margin-top: 10px;
-      font-size: 13px;
-      color: rgba(16,24,40,.78);
-    }
+/* text input */
+input[type="text"]{
+  height: var(--fieldH);
+  box-sizing: border-box;
+}
+
+/* file input (the whole control) */
+input[type="file"]{
+  height: var(--fieldH);
+  box-sizing: border-box;
+  padding: 12px;              /* keep it comfy */
+}
+
+/* (optional) makes the "Choose File" button align nicely inside */
+input[type="file"]::-webkit-file-upload-button{
+  height: calc(var(--fieldH) - 24px);
+  margin-right: 12px;
+}
   </style>
 </head>
 
 <body>
-  <div class="wrap">
-    <h1>Pairwise Labeler</h1>
-    <p class="muted">
-      Admin tool. Load <code>applicants.jsonl</code>, then label pairs: who should rank higher for PME membership.
-      Export <code>pairs.csv</code> and train the ranker locally. Keep this page private.
-    </p>
+  <!-- Match public/index.html hero strip -->
+  <div class="hero-strip">
+    <div class="hero-inner">
+      <div class="hero-left">
+        <div class="kicker">Columbia Pi Mu Epsilon</div>
+        <h1>Pairwise Labeler</h1>
+        <p class="hero-sub">
+          Admin tool. Load <code>applicants.jsonl</code>, then label pairs: who should rank higher for PME membership.
+          Export <code>pairs.csv</code> and train the ranker locally. Keep this page private.
+        </p>
+      </div>
 
+      <!-- Optional: reuse same logo convention -->
+<img class="hero-logo" src="../public/pmelogo.png" alt="Pi Mu Epsilon seal" />    </div>
+  </div>
+
+  <div class="wrap">
     <div class="card">
       <div class="row">
         <div>
-          <label>Load applicants.jsonl</label>
+          <label for="jsonlFile">Load applicants.jsonl</label>
           <input id="jsonlFile" type="file" accept=".jsonl,text/plain"/>
-          <p class="muted" style="margin:10px 0 0;">
-            Tip: your file can contain many lines. Each line should be one JSON object with <code>{id, features, meta}</code>.
+          <p class="note" style="margin:10px 0 0;">
+            Each line should be one JSON object with <code>{id, features, meta}</code>.
           </p>
         </div>
         <div>
-          <label>Optional: session tag (for your notes)</label>
+          <label for="sessionTag">Optional: session tag</label>
           <input id="sessionTag" type="text" placeholder="spring-2026-round1"/>
-          <p class="muted" style="margin:10px 0 0;">
+          <p class="note" style="margin:10px 0 0;">
             Doesn’t affect training. Just helps you keep exports organized.
           </p>
         </div>
       </div>
 
+      <div id="warn" class="warn"></div>
+
       <div class="controls">
-        <button class="primary" id="btnStart" type="button" disabled>Start Labeling</button>
-        <button class="ghost" id="btnNext" type="button" disabled>Skip Pair</button>
-        <button class="ghost" id="btnDownload" type="button" disabled>Download pairs.csv</button>
-        <button class="danger" id="btnReset" type="button">Reset Session</button>
+        <button class="btn btn-primary" id="btnStart" type="button" disabled>Start Labeling</button>
+        <button class="btn btn-ghost" id="btnNext" type="button" disabled>Skip Pair</button>
+        <button class="btn btn-ghost" id="btnDownload" type="button" disabled>Download pairs.csv</button>
+        <button class="btn btn-danger" id="btnReset" type="button">Reset Session</button>
         <span id="status" class="statline"></span>
       </div>
 
@@ -143,7 +390,7 @@
             <div class="pname" id="aname"></div>
             <div class="meta" id="ameta"></div>
           </div>
-          <button class="primary" id="btnA" type="button">A is stronger</button>
+          <button class="btn btn-primary" id="btnA" type="button">A is stronger</button>
         </div>
 
         <div class="panel" id="panelB">
@@ -152,15 +399,13 @@
             <div class="pname" id="bname"></div>
             <div class="meta" id="bmeta"></div>
           </div>
-          <button class="primary" id="btnB" type="button">B is stronger</button>
+          <button class="btn btn-primary" id="btnB" type="button">B is stronger</button>
         </div>
       </div>
 
       <div id="debugWrap" style="display:none; margin-top:12px;">
         <details>
-          <summary style="cursor:pointer; font-weight:800; letter-spacing:.10em; text-transform:uppercase; font-size:12px;">
-            Debug details
-          </summary>
+          <summary>Debug details</summary>
           <pre id="debug"></pre>
         </details>
       </div>
@@ -169,38 +414,30 @@
 
 <script>
   // ==========================
-  // Expected feature indices from your feature_extractor.html
-  // Keep consistent with FEATURE_NAMES there.
-  // 0 gpa_score_0_10
-  // 1 calc12_binary_0_or_10
-  // 2 upper_math_score_0_10
-  // 3 resume_len_log
-  // 8 kw_math_engagement
-  // 9 kw_research_exposition
-  // 10 kw_teaching_mentoring
-  // 11 kw_leadership_service
-  // 12 kw_awards_honors
-  // 13 kw_competitions
-  // 14 essay_math_len_log
-  // 15 essay_comm_len_log
-  // 16 essay_math_reasoning_markers
-  // 17 essay_comm_specificity_markers
-  // 20 keyword_density_penalty
+  // v2 feature indices (same order; meanings updated in features.js)
+  // ==========================
+  const EXPECTED_FEATURE_VERSION = 2;
+  const EXPECTED_DIM = 21;
+
   const IDX = {
     gpa: 0,
     calc: 1,
     upper: 2,
     rlen: 3,
-    mathEng: 8,
+
     research: 9,
     teach: 10,
     leader: 11,
     awards: 12,
-    comp: 13,
-    emLen: 14,
-    ecLen: 15,
-    emReason: 16,
-    ecSpec: 17,
+
+    // v2 essay signals:
+    personalBand: 14,    // 2–4 sentence bandpass (personal)
+    contribBand: 15,     // 2–4 sentence bandpass (math+contrib)
+    personalArc: 16,     // personal arc/reflection
+    planSpec: 17,        // plan specificity
+    personalMath: 18,    // math terms in personal
+    contribMath: 19,     // math terms in contrib
+
     pen: 20
   };
 
@@ -216,6 +453,17 @@
     el("status").textContent = msg || "";
   }
 
+  function showWarn(msg){
+    const w = el("warn");
+    if (!msg){
+      w.style.display = "none";
+      w.textContent = "";
+      return;
+    }
+    w.style.display = "block";
+    w.textContent = msg;
+  }
+
   function safeName(a){
     const n = a && a.meta && a.meta.name ? String(a.meta.name).trim() : "";
     return n || "(no name)";
@@ -225,29 +473,43 @@
     return (id1 < id2) ? `${id1}|${id2}` : `${id2}|${id1}`;
   }
 
+  function fmt1(v){
+    const x = Number(v);
+    return Number.isFinite(x) ? x.toFixed(1) : "—";
+  }
+
   function renderMeta(targetEl, feat){
-    // show a compact set of chips
     const chips = [
       { k: "GPA", v: feat[IDX.gpa] },
       { k: "Calc", v: feat[IDX.calc] },
       { k: "Upper", v: feat[IDX.upper] },
       { k: "Resume", v: feat[IDX.rlen] },
+
       { k: "Research", v: feat[IDX.research] },
       { k: "Teach", v: feat[IDX.teach] },
       { k: "Lead", v: feat[IDX.leader] },
-      { k: "Essays", v: (feat[IDX.emLen] + feat[IDX.ecLen]) / 2 },
+      { k: "Awards", v: feat[IDX.awards] },
+
+      { k: "Personal (2–4)", v: feat[IDX.personalBand] },
+      { k: "Personal Arc", v: feat[IDX.personalArc] },
+
+      { k: "Contrib (2–4)", v: feat[IDX.contribBand] },
+      { k: "Plan Spec", v: feat[IDX.planSpec] },
+
+      { k: "Math Terms P", v: feat[IDX.personalMath] },
+      { k: "Math Terms C", v: feat[IDX.contribMath] },
+
       { k: "Penalty", v: feat[IDX.pen] }
     ];
 
     targetEl.innerHTML = chips.map(c =>
-      `<div class="chip"><strong>${c.k}</strong> ${Number(c.v).toFixed(1)}</div>`
+      `<div class="chip"><strong>${c.k}</strong> ${fmt1(c.v)}</div>`
     ).join("");
   }
 
   function pickNewPair(){
     if (applicants.length < 2) return null;
 
-    // Try up to N attempts to find an unseen pair
     for (let t = 0; t < 2000; t++){
       const i = Math.floor(Math.random() * applicants.length);
       let j = Math.floor(Math.random() * applicants.length);
@@ -270,6 +532,7 @@
     seen.add(key);
 
     el("arena").style.display = "grid";
+
     el("aid").textContent = `A — ${a.id}`;
     el("aname").textContent = safeName(a);
     renderMeta(el("ameta"), a.features);
@@ -290,15 +553,15 @@
     showPair(picked.a, picked.b, picked.key);
   }
 
-  function recordResult(winner){ // "A" or "B"
+  function recordResult(winner){
     if (!curA || !curB) return;
-    // store direction in current orientation: i=curA.id, j=curB.id
-    const row = {
+
+    pairs.push({
       i: curA.id,
       j: curB.id,
       y: (winner === "A") ? 1 : 0
-    };
-    pairs.push(row);
+    });
+
     nextPair();
   }
 
@@ -327,20 +590,30 @@
     const text = await file.text();
     const lines = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
     const out = [];
+    let bad = 0;
+
     for (let idx = 0; idx < lines.length; idx++){
       try{
         const obj = JSON.parse(lines[idx]);
-        if (!obj || !obj.id || !Array.isArray(obj.features)) continue;
+        if (!obj || !obj.id || !Array.isArray(obj.features)) { bad++; continue; }
+
+        const feats = obj.features.map(Number);
+        const fv = obj.meta && obj.meta.feature_version != null ? Number(obj.meta.feature_version) : null;
+
+        if (feats.length !== EXPECTED_DIM) { bad++; continue; }
+        if (fv !== EXPECTED_FEATURE_VERSION) { bad++; continue; }
+
         out.push({
           id: String(obj.id),
-          features: obj.features.map(Number),
+          features: feats,
           meta: obj.meta || {}
         });
       }catch{
-        // ignore bad lines
+        bad++;
       }
     }
-    return out;
+
+    return { out, bad };
   }
 
   // ==========================
@@ -351,8 +624,11 @@
     if (!f) return;
 
     setStatus("Loading applicants.jsonl…");
+    showWarn("");
+
     try{
-      applicants = await loadJsonlFile(f);
+      const res = await loadJsonlFile(f);
+      applicants = res.out;
       pairs = [];
       seen = new Set();
       curA = null;
@@ -362,11 +638,18 @@
       el("btnNext").disabled = applicants.length < 2;
       el("btnDownload").disabled = applicants.length < 2;
 
-      setStatus(`Loaded ${applicants.length} applicants. Click "Start Labeling".`);
+      if (res.bad > 0){
+        showWarn(`Skipped ${res.bad} lines (bad JSON / wrong feature_version / wrong feature length). Make sure you generated JSONL with the v2 feature extractor.`);
+      }
+
+      setStatus(`Loaded ${applicants.length} v2 applicants. Click "Start Labeling".`);
       el("debugWrap").style.display = "block";
       el("debug").textContent = JSON.stringify({
+        expected_feature_version: EXPECTED_FEATURE_VERSION,
+        expected_dim: EXPECTED_DIM,
         loaded: applicants.length,
-        sample_ids: applicants.slice(0, 10).map(a => a.id)
+        skipped_lines: res.bad,
+        sample_ids: applicants.slice(0, 12).map(a => a.id)
       }, null, 2);
     }catch(err){
       setStatus(`Error loading file: ${err && err.message ? err.message : "unknown"}`);
@@ -381,13 +664,9 @@
     nextPair();
   });
 
-  el("btnNext").addEventListener("click", () => {
-    nextPair();
-  });
-
+  el("btnNext").addEventListener("click", () => nextPair());
   el("btnA").addEventListener("click", () => recordResult("A"));
   el("btnB").addEventListener("click", () => recordResult("B"));
-
   el("btnDownload").addEventListener("click", () => downloadPairs());
 
   el("btnReset").addEventListener("click", () => {
@@ -406,6 +685,7 @@
     el("btnNext").disabled = true;
     el("btnDownload").disabled = true;
 
+    showWarn("");
     setStatus("Reset complete.");
   });
 </script>

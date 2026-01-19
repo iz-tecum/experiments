@@ -3,130 +3,479 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Feature Extractor (PME Ranker)</title>
+  <title>PME Feature Extractor</title>
 
+  <!-- Match public/index.html font load -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
 
-  <!-- PDF.js (free) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.js"></script>
+  <!-- PDF.js (global build) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 
-  <!-- Shared feature engine (single source of truth) -->
-  <script src="../features.js"></script>
+  <!-- Shared deterministic features (same engine as the app) -->
+  <script src="../public/features.js"></script>
 
   <style>
-    body{ margin:0; font-family:Montserrat,system-ui,-apple-system,Segoe UI,sans-serif; color:#0b1220; }
-    .wrap{ max-width: 980px; margin:0 auto; padding: 22px; }
-    h1{ margin: 0 0 10px; font-size: 28px; }
-    .muted{ color: rgba(16,24,40,.72); line-height:1.6; }
-    .card{ border: 1px solid rgba(16,24,40,.14); border-radius: 14px; padding: 16px; margin-top: 14px; }
-    label{ display:block; margin: 12px 0 6px; font-size: 12px; letter-spacing:.08em; text-transform: uppercase; font-weight: 700; color: rgba(16,24,40,.78); }
-    input, select, textarea{ width:100%; padding: 12px; border:1px solid rgba(16,24,40,.14); border-radius: 12px; font-family:inherit; background:#fff; }
-    textarea{ min-height: 110px; resize: vertical; line-height:1.6; }
-    .row{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    @media(max-width:820px){ .row{ grid-template-columns:1fr; } }
-    button{ border:0; border-radius: 12px; padding: 12px 14px; font-weight: 800; letter-spacing:.10em; text-transform: uppercase; cursor:pointer; }
-    .primary{ background: rgba(16,24,40,.92); color:#fff; }
-    .ghost{ background: rgba(16,24,40,.06); color: rgba(16,24,40,.92); }
-    pre{ white-space: pre-wrap; background: rgba(16,24,40,.04); padding: 12px; border-radius: 12px; border: 1px solid rgba(16,24,40,.10); }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: Montserrat, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:#f6f6f9;
+      color:#0b1220;
+    }
+
+    :root{
+      --container: 1060px;
+      --padX: 22px;
+
+      --pme-purple: #6d4cff;
+      --pme-purple-2: #a855f7;
+
+      --ink: rgba(17,10,35,.92);
+      --muted: rgba(17,10,35,.70);
+
+      --border: rgba(17,10,35,.16);
+      --border2: rgba(109,76,255,.30);
+
+      --card-bg: #ffffff;
+      --shadow: 0 10px 26px rgba(17,10,35,.06);
+
+      /* blocky */
+      --r: 0px;
+
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+      /* flat hero bg */
+      --hero-bg: #eadcff;
+    }
+
+    .wrap{ max-width: var(--container); margin: 0 auto; padding: 18px var(--padX) 90px; }
+
+    /* HERO STRIP (match index.html) */
+    .hero-strip{
+      background: var(--hero-bg);
+      color: var(--ink);
+      padding: 22px var(--padX);
+      border-bottom: 0px solid rgba(17,10,35,.10);
+    }
+    .hero-inner{
+      max-width: var(--container);
+      margin: 0 auto;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 18px;
+    }
+    .hero-left{ min-width: 0; }
+    .kicker{
+      font-size: 12px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      font-weight: 800;
+      color: var(--pme-purple);
+      opacity: 1;
+    }
+    h1{
+      margin: 10px 0 0;
+      font-size: clamp(30px, 3.2vw, 46px);
+      letter-spacing: -0.03em;
+      font-weight: 800;
+      line-height: 1.02;
+      color: var(--ink);
+    }
+    .hero-logo{
+      width: 90px;
+      height: 90px;
+      object-fit: contain;
+      flex: 0 0 auto;
+      filter: drop-shadow(0 10px 18px rgba(17,10,35,.10));
+    }
+    @media (max-width: 640px){
+      .hero-logo{ width: 72px; height: 72px; }
+    }
+
+    /* Layout */
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      margin-top: 18px;
+    }
+
+    /* Cards (match index.html) */
+    .card{
+      border: 2px solid rgba(17,10,35,.12);
+      background: var(--card-bg);
+      border-radius: var(--r);
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+    .card-title{
+      margin: 0 0 12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+    }
+    .card-title h2{
+      margin:0;
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: rgba(17,10,35,.86);
+    }
+    .tag{
+      display:inline-flex;
+      align-items:center;
+      padding: 8px 10px;
+      border-radius: var(--r);
+      font-size: 12px;
+      letter-spacing:.14em;
+      text-transform: uppercase;
+      font-weight: 900;
+      border: 2px solid rgba(17,10,35,.16);
+      background: rgba(17,10,35,.04);
+      color: rgba(17,10,35,.90);
+      white-space: nowrap;
+    }
+
+    .row{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      align-items:start;
+    }
+    @media (max-width: 900px){
+      .row{ grid-template-columns: 1fr; }
+    }
+    /* let a child span both columns of a .row */
+.span-2{ grid-column: 1 / -1; }
+
+    label{
+      display:block;
+      font-size: 11px;
+      letter-spacing:.14em;
+      text-transform: uppercase;
+      color: rgba(17,10,35,.72);
+      margin: 14px 0 8px;
+      font-weight: 900;
+    }
+
+    /* Match input/select heights */
+    input, select{
+      width:100%;
+      height: 52px;
+      padding: 12px 12px;
+      border: 2px solid rgba(17,10,35,.16);
+      border-radius: var(--r);
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+      background:#fff;
+      transition: border-color 180ms var(--ease), box-shadow 180ms var(--ease);
+      line-height: 1.2;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    textarea{
+      width:100%;
+      padding: 12px 12px;
+      border: 2px solid rgba(17,10,35,.16);
+      border-radius: var(--r);
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+      background:#fff;
+      transition: border-color 180ms var(--ease), box-shadow 180ms var(--ease);
+      min-height: 120px;
+      resize: vertical;
+      line-height:1.6;
+    }
+
+    input:focus, select:focus, textarea:focus{
+      border-color: rgba(109,76,255,.85);
+      box-shadow: 0 0 0 3px rgba(109,76,255,.18);
+    }
+
+    .note{
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height:1.65;
+    }
+
+    .rule{
+      height: 2px;
+      background: rgba(17,10,35,.08);
+      margin: 16px 0 10px;
+    }
+
+    /* Course mark UI */
+    .course-row{
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+    @media (max-width: 640px){
+      .course-row{ grid-template-columns: 1fr; }
+    }
+    .course-hint{
+      font-size: 12px;
+      color: rgba(17,10,35,.70);
+      line-height:1.6;
+      margin-top: 10px;
+    }
+    .mono{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      background: rgba(17,10,35,.04);
+      border: 2px solid rgba(17,10,35,.10);
+      border-radius: var(--r);
+      padding: 2px 6px;
+    }
+
+    /* Buttons (match index.html) */
+    .btn{
+      appearance:none;
+      border: 2px solid rgba(17,10,35,.16);
+      cursor:pointer;
+      font-family: inherit;
+      border-radius: var(--r);
+      padding: 16px 20px;
+      font-weight: 900;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      font-size: 12px;
+      user-select:none;
+      white-space:nowrap;
+      background:#fff;
+      color: rgba(17,10,35,.92);
+      transition: none;
+    }
+    .btn:disabled{ opacity:.55; cursor:not-allowed; }
+
+    .btn-primary{
+      background: #eadcff;
+      border-color: #eadcff;
+      border: 0;
+      color:#000000;
+    }
+    .btn-ghost{
+      background: rgba(17,10,35,.06);
+      border-color: rgba(17,10,35,.14);
+      border: 0;
+      color: rgba(17,10,35,.92);
+    }
+
+    /* Chips */
+    .chips{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding: 12px 14px;
+      border-radius: var(--r);
+      border: 0px solid rgba(109,76,255,.30);
+      background: rgba(109,76,255,.10);
+      color: rgba(17,10,35,.92);
+      font-size: 12px;
+      letter-spacing: .06em;
+      font-weight: 800;
+    }
+    .chip button{
+      border:0;
+      background: transparent;
+      cursor: pointer;
+      font-weight: 900;
+      font-size: 14px;
+      line-height: 1;
+      padding: 0;
+      color: rgba(17,10,35,.80);
+    }
+
+    .err{
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: var(--r);
+      background: rgba(220,38,38,.06);
+      border: 2px solid rgba(220,38,38,.22);
+      color: rgba(127,29,29,.92);
+      font-size: 13px;
+      line-height: 1.55;
+      display:none;
+    }
+
+    .actions{
+      display:flex;
+      gap: 10px;
+      margin-top: 16px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .status{
+      font-size: 13px;
+      color: rgba(17,10,35,.82);
+      margin-left: 2px;
+    }
+    .status.muted{ color: var(--muted); }
+
+    pre{
+      white-space: pre-wrap;
+      background: rgba(17,10,35,.04);
+      padding: 12px;
+      border-radius: var(--r);
+      border: 2px solid rgba(17,10,35,.10);
+      font-size: 12px;
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    
   </style>
 </head>
 
 <body>
-  <div class="wrap">
-    <h1>Feature Extractor</h1>
-    <p class="muted">
-      Admin tool. Upload an applicant’s resume + essays and generate a single JSONL line for <code>applicants.jsonl</code>.
-      Keep this page private.
-    </p>
-
-    <div class="card">
-      <div class="row">
-        <div>
-          <label>Applicant ID (required)</label>
-          <input id="id" placeholder="a001"/>
-        </div>
-        <div>
-          <label>Display name (optional)</label>
-          <input id="name" placeholder="a001 — Jane Doe"/>
-        </div>
+  <div class="hero-strip">
+    <div class="hero-inner">
+      <div class="hero-left">
+        <div class="kicker">Columbia Pi Mu Epsilon</div>
+        <h1>Feature Extractor</h1>
       </div>
-
-      <div class="row">
-        <div>
-          <label>Overall GPA (0.0–4.0)</label>
-          <input id="gpa" type="number" min="0" max="4" step="0.01" placeholder="3.78"/>
-        </div>
-        <div>
-          <label>Completed Calc I &amp; II (binary)</label>
-          <select id="calc">
-            <option value="">Select</option>
-            <option value="yes">Yes (10)</option>
-            <option value="no">No (0)</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="row">
-        <div>
-          <label># courses at/above calculus (excluding Calc I/II)</label>
-          <input id="upperCount" type="number" min="0" max="20" step="1" placeholder="2"/>
-        </div>
-        <div>
-          <label>Highest level among those courses</label>
-          <select id="upperRigor">
-            <option value="">Select</option>
-            <option value="standard">Standard (MVC/LA/ODE)</option>
-            <option value="proof">Proof-based</option>
-            <option value="upper">Upper-level (analysis/algebra/etc.)</option>
-            <option value="grad">Graduate / research</option>
-          </select>
-        </div>
-      </div>
-
-      <label>Resume PDF</label>
-      <input id="resume" type="file" accept="application/pdf"/>
-
-      <label>Short Answer 1 (Math maturity)</label>
-      <textarea id="essayMath" placeholder="Describe a theorem/proof/problem you found beautiful. What was the key idea?"></textarea>
-
-      <label>Short Answer 2 (Community contribution)</label>
-      <textarea id="essayCommunity" placeholder="How would you contribute to the chapter this term?"></textarea>
-
-      <div class="row" style="margin-top:12px;">
-        <button class="primary" id="btnGen" type="button">Generate JSONL Line</button>
-        <button class="ghost" id="btnClear" type="button">Clear</button>
-      </div>
-
-      <p class="muted" id="status" style="margin-top:10px;"></p>
-
-      <div id="outWrap" style="display:none; margin-top:12px;">
-        <div class="row">
-          <button class="primary" id="btnCopy" type="button">Copy JSONL</button>
-          <button class="ghost" id="btnDownload" type="button">Download .jsonl</button>
-        </div>
-        <pre id="out" style="margin-top:12px;"></pre>
-      </div>
+      <!-- IMPORTANT: tools/ -> public/ -->
+      <img class="hero-logo" src="../public/pmelogo.png" alt="Pi Mu Epsilon seal" />
     </div>
+  </div>
 
-    <div class="card">
-      <h2 style="margin:0 0 10px;">Feature Definitions (v1)</h2>
-      <p class="muted" style="margin:0 0 10px;">
-        These are the feature names and order used to build the vector. Keep this stable across the cycle.
-      </p>
-      <pre id="featNames"></pre>
+  <div class="wrap">
+    <div class="grid">
+
+      <!-- CARD: Inputs -->
+      <div class="card">
+        <div class="card-title">
+          <div class=""><span id="fv"></span></div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="id">Applicant ID (required)</label>
+            <input id="id" placeholder="a001" />
+            <p class="note">Use a stable identifier: <span class="mono">a001</span>, <span class="mono">a002</span>, …</p>
+          </div>
+          <div>
+            <label for="name">Display name (optional)</label>
+            <input id="name" placeholder="a001 — Jane Doe" />
+            <p class="note">Only used for UI during labeling.</p>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="gpa">Overall GPA (0.00–4.33)</label>
+            <input id="gpa" type="number" min="0" max="4.33" step="0.01" placeholder="3.78"/>
+            <p class="note">Columbia GPAs can exceed 4.0 due to A+ (up to ~4.33).</p>
+          </div>
+          <div>
+            <label for="calc">Completed Calc I &amp; II (binary)</label>
+            <select id="calc">
+              <option value="">Select</option>
+              <option value="yes">Yes (counts)</option>
+              <option value="no">No (does not count)</option>
+            </select>
+            <p class="note">Binary gate signal (still weighted holistically downstream).</p>
+          </div>
+        </div>
+
+        <div class="rule"></div>
+
+        <label>Advanced / Recent Math Coursework (mark up to 6)</label>
+        <div class="course-row">
+          <input id="courseInput" placeholder="Example: MATH GU4061 (or MATH GR6151)" />
+          <button class="btn btn-primary" id="btnMarkCourse" type="button">Mark Course</button>
+        </div>
+        <div class="course-hint">
+          Accepted only if in <span class="mono">public/course_whitelist.json</span> or graduate-level <span class="mono">MATH GR5xxx/6xxx</span>.
+        </div>
+
+        <div id="courseChips" class="chips" aria-label="Selected courses"></div>
+        <p class="note" id="courseCountNote">0 / 6 courses marked.</p>
+        <div id="courseErr" class="err"></div>
+
+        <div class="rule"></div>
+
+        <div class="field span-2">
+          <label>Resume (PDF)</label>
+          <input id="resume" type="file" accept="application/pdf"/>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="essayMath">Short Answer A (Personal, 2–4 sentences)</label>
+            <textarea id="essayMath" placeholder="One experience that shaped how you approach math, and what it changed about how you learn or persist."></textarea>
+            <p class="note">Write tightly. Storyline > length.</p>
+          </div>
+          <div>
+            <label for="essayCommunity">Short Answer B (Math + Contribution, 2–4 sentences)</label>
+            <textarea id="essayCommunity" placeholder="One mathematical idea + key insight, then one specific PME contribution tied to that interest."></textarea>
+            <p class="note">Concrete plan beats generalities.</p>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-primary" id="btnGen" type="button">Generate JSONL Line</button>
+          <button class="btn btn-ghost" id="btnClear" type="button">Clear</button>
+          <span class="status muted" id="status"></span>
+        </div>
+
+        <div id="outWrap" style="display:none; margin-top:12px;">
+          <div class="actions">
+            <button class="btn btn-primary" id="btnCopy" type="button">Copy JSONL</button>
+            <button class="btn btn-ghost" id="btnDownload" type="button">Download .jsonl</button>
+          </div>
+          <div style="margin-top:12px;">
+            <pre id="out"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD: Feature definitions -->
+      <div class="card">
+        <div class="card-title">
+          <h2>Feature Definitions</h2>
+          <div class="tag">Stable schema</div>
+        </div>
+        <pre id="featNames"></pre>
+      </div>
+
     </div>
   </div>
 
   <script>
     const el = (id) => document.getElementById(id);
 
-    // PDF.js resume text extraction (free)
+    // ---------- PDF.js ----------
+    function getPdfjs(){
+      if (window.pdfjsLib) return window.pdfjsLib;
+      throw new Error("PDF.js failed to load (pdfjsLib not found).");
+    }
+    function ensurePdfWorker(pdfjs){
+      pdfjs.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
+    }
     async function extractPdfText(file){
       if (!file) return "";
       const buf = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      const pdfjs = getPdfjs();
+      ensurePdfWorker(pdfjs);
+
+      const pdf = await pdfjs.getDocument({ data: buf }).promise;
       const maxPages = pdf.numPages;
       let text = "";
 
@@ -140,17 +489,101 @@
       return text.trim();
     }
 
-    // Export: JSONL line
+    // ---------- Courses ----------
+    const MAX_COURSES = 6;
+    const markedCourses = [];
+    let COURSE_DB = null;
+
+    async function loadCourseDB(){
+      try{
+        const res = await fetch("../public/course_whitelist.json", { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const codes = Array.isArray(data.codes) ? data.codes : [];
+        COURSE_DB = new Set(codes.map(s => String(s).trim().toUpperCase()));
+      }catch(e){
+        COURSE_DB = null;
+        console.warn("Failed to load course whitelist:", e);
+      }
+    }
+
+    function normalizeCourseCode(s){
+      let t = String(s || "").trim().toUpperCase();
+      t = t.replace(/^MATH(UN|GU|GR|BC)(\d{4})$/, "MATH $1$2");
+      t = t.replace(/^MATH\s+(UN|GU|GR|BC)(\d{4})$/, "MATH $1$2");
+      t = t.replace(/\s+/g, " ");
+      t = t.replace(/^MATH\s+(UN|GU|GR|BC)\s+(\d{4})$/, "MATH $1$2");
+      return t;
+    }
+
+    function isGraduateMath(code){
+      return /^MATH\s+GR[56]\d{3}$/.test(code);
+    }
+
+    function showCourseError(msg){
+      const box = el("courseErr");
+      if (!box) return;
+      box.style.display = "block";
+      box.textContent = msg;
+    }
+    function clearCourseError(){
+      const box = el("courseErr");
+      if (!box) return;
+      box.style.display = "none";
+      box.textContent = "";
+    }
+
+    function renderCourses(){
+      const wrap = el("courseChips");
+      if (!wrap) return;
+
+      wrap.innerHTML = "";
+      markedCourses.forEach((c, idx) => {
+        const chip = document.createElement("div");
+        chip.className = "chip";
+        chip.innerHTML = `<span>${c}</span><button type="button" aria-label="Remove ${c}" title="Remove">×</button>`;
+        chip.querySelector("button").addEventListener("click", () => {
+          markedCourses.splice(idx, 1);
+          renderCourses();
+        });
+        wrap.appendChild(chip);
+      });
+
+      const note = el("courseCountNote");
+      if (note) note.textContent = `${markedCourses.length} / ${MAX_COURSES} courses marked.`;
+
+      const btn = el("btnMarkCourse");
+      if (btn) btn.disabled = markedCourses.length >= MAX_COURSES;
+    }
+
+    el("btnMarkCourse").addEventListener("click", () => {
+      clearCourseError();
+      const code = normalizeCourseCode(el("courseInput").value);
+
+      if (!code) return showCourseError("Enter a course code first (example: MATH GU4061).");
+      if (markedCourses.length >= MAX_COURSES) return showCourseError("You’ve already marked the maximum of 6 courses.");
+      if (markedCourses.includes(code)) return showCourseError("That course is already marked.");
+
+      if (!isGraduateMath(code)){
+        if (!COURSE_DB) return showCourseError("Course database failed to load. Only MATH GR5xxx/6xxx can be marked right now.");
+        if (!COURSE_DB.has(code)) return showCourseError("Not found in the Mathematics bulletin. Only listed courses or MATH GR5xxx/6xxx are counted.");
+      }
+
+      markedCourses.push(code);
+      el("courseInput").value = "";
+      renderCourses();
+    });
+
+    // ---------- JSONL export ----------
     function makeJsonlLine({ id, name, features }){
-      const obj = {
+      return JSON.stringify({
         id,
         features,
         meta: {
           name: name || "",
           feature_version: PMEFeatures.FEATURE_VERSION
         }
-      };
-      return JSON.stringify(obj);
+      });
     }
 
     function downloadText(filename, text){
@@ -169,68 +602,54 @@
       try{
         await navigator.clipboard.writeText(text);
         el("status").textContent = "Copied JSONL line to clipboard.";
+        el("status").classList.remove("muted");
       }catch{
         el("status").textContent = "Copy failed. You can manually copy from the preview box.";
+        el("status").classList.remove("muted");
       }
     }
 
-    // Show stable feature schema
-    el("featNames").textContent =
-      JSON.stringify(
-        { feature_version: PMEFeatures.FEATURE_VERSION, feature_names: PMEFeatures.FEATURE_NAMES },
-        null,
-        2
-      );
+    // Schema display
+    el("fv").textContent = String(PMEFeatures.FEATURE_VERSION);
+    el("featNames").textContent = JSON.stringify(
+      { feature_version: PMEFeatures.FEATURE_VERSION, feature_names: PMEFeatures.FEATURE_NAMES },
+      null,
+      2
+    );
+
+    // Load whitelist + init
+    loadCourseDB().then(() => renderCourses());
 
     el("btnGen").addEventListener("click", async () => {
       el("status").textContent = "";
+      el("status").classList.add("muted");
       el("outWrap").style.display = "none";
       el("out").textContent = "";
 
       const id = (el("id").value || "").trim();
       const name = (el("name").value || "").trim();
-
       const gpa = PMEFeatures.safeNum(el("gpa").value, NaN);
       const calcVal = el("calc").value || "";
-
-      const upperCount = parseInt(el("upperCount").value || "0", 10);
-      const upperRigor = el("upperRigor").value || "";
 
       const resumeFile = el("resume").files && el("resume").files[0] ? el("resume").files[0] : null;
       const essayMath = el("essayMath").value || "";
       const essayComm = el("essayCommunity").value || "";
 
-      if (!id){
-        el("status").textContent = "Applicant ID is required (e.g., a001).";
-        return;
-      }
-      if (!resumeFile){
-        el("status").textContent = "Upload a resume PDF before generating features.";
-        return;
-      }
-      if (!Number.isFinite(gpa)){
-        el("status").textContent = "Enter a valid GPA.";
-        return;
-      }
-      if (!calcVal){
-        el("status").textContent = "Select Calc I/II completion.";
-        return;
-      }
-      if (!upperRigor){
-        el("status").textContent = "Select the highest level among upper courses.";
-        return;
-      }
+      if (!id){ el("status").textContent = "Applicant ID is required (e.g., a001)."; return; }
+      if (!Number.isFinite(gpa)){ el("status").textContent = "Enter a valid GPA."; return; }
+      if (!calcVal){ el("status").textContent = "Select Calc I/II completion."; return; }
+      if (markedCourses.length === 0){ el("status").textContent = "Mark at least 1 course (up to 6)."; return; }
+      if (!resumeFile){ el("status").textContent = "Upload a resume PDF."; return; }
 
       try{
-        el("status").textContent = "Extracting PDF text…";
+        el("status").textContent = "Extracting resume…";
         const resumeText = await extractPdfText(resumeFile);
 
-        el("status").textContent = "Building feature vector…";
+        el("status").textContent = "Building features…";
         const features = PMEFeatures.buildFeatures({
           gpa,
           calcVal,
-          upperCount,
-          upperRigor,
+          courses: markedCourses,
           resumeText,
           essayMath,
           essayComm
@@ -250,13 +669,18 @@
     });
 
     el("btnClear").addEventListener("click", () => {
-      ["id","name","gpa","calc","upperCount","upperRigor","resume","essayMath","essayCommunity"].forEach(k => {
+      ["id","name","gpa","calc","resume","essayMath","essayCommunity","courseInput"].forEach(k => {
         const node = el(k);
         if (!node) return;
         if (node.type === "file") node.value = "";
         else node.value = "";
       });
+      markedCourses.splice(0, markedCourses.length);
+      renderCourses();
+      clearCourseError();
+
       el("status").textContent = "";
+      el("status").classList.add("muted");
       el("outWrap").style.display = "none";
       el("out").textContent = "";
     });
